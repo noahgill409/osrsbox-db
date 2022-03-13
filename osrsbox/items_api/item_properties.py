@@ -20,13 +20,13 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 import json
 from pathlib import Path
-from dataclasses import asdict
-from dataclasses import dataclass
-from typing import Dict
-from typing import Optional
+from dataclasses import asdict, dataclass
+from typing import Optional, Dict
 
 from osrsbox.items_api.item_equipment import ItemEquipment
 from osrsbox.items_api.item_weapon import ItemWeapon
+from osrsbox.items_api.item_special_weapon import ItemSpecialWeapon
+from osrsbox.items_api.modifier import Modifier, process_modifiers
 
 
 @dataclass
@@ -70,19 +70,35 @@ class ItemProperties:
     wiki_url: Optional[str]
     equipment: Optional[ItemEquipment] = None
     weapon: Optional[ItemWeapon] = None
+    special_weapon: Optional[ItemSpecialWeapon] = None
 
     @classmethod
     def from_json(cls, json_dict: Dict) -> 'ItemProperties':
         """Construct ItemProperties object from dictionary/JSON."""
+        # keys for json access
+        equipment_key = "equipment"
+        weapon_key = "weapon"
+        special_weapon_key = "special weapon"
+        special_attack_roll_modifiers_key = "special attack roll modifiers"
+        special_damage_modifiers_key = "special damage modifiers"
+
         # Convert the dictionary under the 'equipment' key into ItemEquipment.
         if json_dict.get("equipable_by_player"):
-            equipment = json_dict.pop("equipment")
-            json_dict["equipment"] = ItemEquipment(**equipment)
+            equipment = json_dict.pop(equipment_key)
+            json_dict[equipment_key] = ItemEquipment(**equipment)
 
         # Convert the dictionary under the 'weapon' key into ItemWeapon.
-        if json_dict.get("weapon"):
-            weapon = json_dict.pop("weapon")
-            json_dict["weapon"] = ItemWeapon(**weapon)
+        if json_dict.get(weapon_key):
+            weapon = json_dict.pop(weapon_key)
+            json_dict[weapon_key] = ItemWeapon(**weapon)
+
+        # Convert the dictionary under the 'special weapon'
+        if json_dict.get(special_weapon_key):
+            special_weapon: dict = json_dict.pop(special_weapon_key)
+
+            # Replace lists of dicts with lists of Modifier objects.
+            process_modifiers(special_weapon, special_attack_roll_modifiers_key)
+            process_modifiers(special_weapon, special_damage_modifiers_key)
 
         return cls(**json_dict)
 
